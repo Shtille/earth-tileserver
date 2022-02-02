@@ -1,4 +1,6 @@
 # Earth Tile Server
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FShtille%2Fearth-tileserver.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FShtille%2Fearth-tileserver?ref=badge_shield)
+
 
 *Earth Tile Server* is the tile server made for [Earth WebGL](https://github.com/Shtille/earth-webgl).
 It parses GET requests for coordinates and generates images (tiles) for response.
@@ -17,6 +19,9 @@ Use *test.html* for as test browser page for tiles loading.
 
 ## License
 Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FShtille%2Fearth-tileserver.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FShtille%2Fearth-tileserver?ref=badge_large)
 
 ## Bug Reporting
 Please log bugs under [Issues](https://github.com/Shtille/earth-tileserver/issues) on github.
