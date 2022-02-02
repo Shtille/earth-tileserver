@@ -117,4 +117,5 @@ void server__free(struct server_t * server)
 		server->saim = NULL;
 	}
 	free((void*)server);
+	server = NULL;
 }
