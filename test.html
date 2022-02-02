@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Test tiles load</title>
+	<style type="text/css">
+		.c-div-table {
+			display: table;
+			width: auto;
+			background-color: grey;
+		}
+		.c-div-table-row {
+			display: table-row;
+			width: auto;
+			clear: both;
+		}
+		.c-div-table-col {
+			float: left;
+			display: table-column;
+			width: 100px;
+			height: 100px;
+		}
+		.c-div-image {
+			width: 100px;
+			height: 100px;
+		}
+	</style>
+	<script type="text/javascript">
+		function getTileUrl(siteUrl, face, lod, x, y) {
+			return siteUrl + "/tile?face=" + String(face) + "&lod=" + String(lod) + "&x=" + String(x) + "&y=" + String(y);
+		}
+		function onLoadButtonClicked() {
+			var url = document.getElementById("siteUrl").value;
+			document.getElementById("tile00").src = getTileUrl(url, 0, 1, 0, 0);
+			document.getElementById("tile01").src = getTileUrl(url, 0, 1, 0, 1);
+			document.getElementById("tile10").src = getTileUrl(url, 0, 1, 1, 0);
+			document.getElementById("tile11").src = getTileUrl(url, 0, 1, 1, 1);
+		}
+	</script>
+</head>
+<body>
+	<div>
+		<input id="siteUrl" type="text" value="http://localhost:8000">
+	</div>
+	<div class="c-div-table" style="width: 200px; height: 200px;">
+		<div class="c-div-table-row">
+			<div class="c-div-table-col">
+				<img id="tile00" class="c-div-image" src="">
+				<!--div class="c-div-image" style="background-color: green;"></div-->
+			</div>
+			<div class="c-div-table-col">
+				<img id="tile10" class="c-div-image" src="">
+			</div>
+		</div>
+		<div class="c-div-table-row">
+			<div class="c-div-table-col">
+				<img id="tile01" class="c-div-image" src="">
+			</div>
+			<div class="c-div-table-col">
+				<img id="tile11" class="c-div-image" src="">
+			</div>
+		</div>
+	</div>
+	<input id="btnLoad" type="button" value="Load" onclick="onLoadButtonClicked()">
+</body>
+</html>

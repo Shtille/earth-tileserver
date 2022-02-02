@@ -1,0 +1,3 @@
+[submodule "deps/libsaim"]
+	path = deps/libsaim
+	url = https://github.com/Shtille/libsaim.git
