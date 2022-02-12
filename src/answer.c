@@ -139,8 +139,6 @@ static enum MHD_Result make_image_response(struct MHD_Connection *connection, sa
 	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
 	MHD_destroy_response(response);
 
-	saim_string_destroy(data);
-
 	return ret;
 }
 
@@ -150,6 +148,7 @@ static enum MHD_Result make_jpeg_response(struct MHD_Connection *connection, str
 	saim_string data;
 	unsigned char* dest_ptr = NULL;
 	unsigned long dest_size;
+	enum MHD_Result ret;
 
 	// Make buffer string
 	bitmap.data = server->buffer;
@@ -160,19 +159,20 @@ static enum MHD_Result make_jpeg_response(struct MHD_Connection *connection, str
 			free(dest_ptr);
 		return make_server_error_response(connection);
 	}
-	if (dest_ptr != NULL)
-	{
-		saim_string_create(&data);
-		saim_string_append(&data, (const char*)dest_ptr, (unsigned int)dest_size);
-		free(dest_ptr);
-	}
-	return make_image_response(connection, &data, FORMAT_JPEG);
+	if (dest_ptr == NULL)
+		return make_server_error_response(connection);
+	data.data = (char*)dest_ptr;
+	data.length = (unsigned int)dest_size;
+	ret = make_image_response(connection, &data, FORMAT_JPEG);
+	free(dest_ptr);
+	return ret;
 }
 
 static enum MHD_Result make_png_response(struct MHD_Connection *connection, struct server_t * server)
 {
 	saim_bitmap bitmap;
 	saim_string data;
+	enum MHD_Result ret;
 
 	// Make buffer string
 	bitmap.data = server->buffer;
@@ -183,7 +183,9 @@ static enum MHD_Result make_png_response(struct MHD_Connection *connection, stru
 		saim_string_destroy(&data);
 		return make_server_error_response(connection);
 	}
-	return make_image_response(connection, &data, FORMAT_PNG);
+	ret = make_image_response(connection, &data, FORMAT_PNG);
+	saim_string_destroy(&data);
+	return ret;
 }
 
 enum MHD_Result answer_callback(void *cls, struct MHD_Connection *connection,
