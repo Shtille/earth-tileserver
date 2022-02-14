@@ -15,7 +15,6 @@
 
 typedef struct {
 	int face, lod, x, y;
-	enum image_format_t format;
 } arguments_t;
 
 static const char* kServerError = "<html><body>An internal server error has occurred!</body></html>";
@@ -102,14 +101,10 @@ static bool get_tile_key(struct MHD_Connection *connection, int * face, int * lo
 	return true;
 }
 
-static bool parse_arguments(struct MHD_Connection *connection, arguments_t * args)
+static bool parse_cube_arguments(struct MHD_Connection *connection, arguments_t * args)
 {
 	// Get tile coordinates
 	if (!get_tile_key(connection, &args->face, &args->lod, &args->x, &args->y))
-		return false;
-
-	// Get image format
-	if (!get_image_format(connection, &args->format))
 		return false;
 
 	return true;
@@ -123,6 +118,36 @@ static enum MHD_Result make_server_error_response(struct MHD_Connection *connect
 	response = MHD_create_response_from_buffer(strlen(kServerError), (void*)kServerError, MHD_RESPMEM_PERSISTENT);
 	ret = MHD_queue_response(connection, MHD_HTTP_INTERNAL_SERVER_ERROR, response);
 	MHD_destroy_response(response);
+
+	return ret;
+}
+
+static enum MHD_Result make_help_response(struct MHD_Connection *connection)
+{
+	struct MHD_Response * response;
+	enum MHD_Result ret;
+	FILE * f;
+	f = fopen("help.html", "rt");
+	if (f == NULL)
+	{
+		printf("help file hasn't been found\n");
+		return make_server_error_response(connection);
+	}
+
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *string = malloc(fsize + 1);
+	fread(string, fsize, 1, f);
+	fclose(f);
+	string[fsize] = '\0';
+
+	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_PERSISTENT);
+	MHD_add_response_header(response, "Content-Type", "text/html");
+	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+	MHD_destroy_response(response);
+
+	free(string);
 
 	return ret;
 }
@@ -193,14 +218,68 @@ static enum MHD_Result make_png_response(struct MHD_Connection *connection, stru
 	return ret;
 }
 
+static bool render_mapped_cube(struct MHD_Connection *connection, const arguments_t * args, struct server_t * server)
+{
+	int tiles_left;
+
+	mtx_lock(&server->mutex);
+	do
+	{
+		tiles_left = saim_render_mapped_cube(server->saim, args->face, args->lod, args->x, args->y);
+		thrd_yield();
+	}
+	while (tiles_left > 0);
+	mtx_unlock(&server->mutex);
+
+	// -1 means that inner error has occured
+	return tiles_left == 0;
+}
+
+static bool process_cube_request(struct MHD_Connection *connection, struct server_t * server)
+{
+	arguments_t args;
+
+	// Parse request arguments
+	if (!parse_cube_arguments(connection, &args))
+		return false;
+
+	// Render to buffer
+	return render_mapped_cube(connection, &args, server);
+}
+
+static enum MHD_Result process_request(struct MHD_Connection *connection, const char* url, struct server_t * server)
+{
+	enum image_format_t format;
+
+	if (strcmp(url, "/help") == 0)
+		return make_help_response(connection);
+
+	// Get image format
+	if (!get_image_format(connection, &format))
+		return false;
+
+	// Process request
+	if (!process_cube_request(connection, server))
+		return make_server_error_response(connection);
+
+	// Make response depending on requested image format
+	switch (format)
+	{
+	case FORMAT_JPEG:
+		return make_jpeg_response(connection, server);
+	case FORMAT_PNG:
+		return make_png_response(connection, server);
+	default:
+		return make_server_error_response(connection);
+	}
+}
+
 enum MHD_Result answer_callback(void *cls, struct MHD_Connection *connection,
 	const char *url, const char *method, const char *version,
 	const char *upload_data, size_t *upload_data_size, void **ptr)
 {
 	static int aptr;
 	struct server_t * server = (struct server_t *) cls;
-	arguments_t args;
-	int tiles_left;
 
 	(void) url;               /* Unused. Silent compiler warning. */
 	(void) version;           /* Unused. Silent compiler warning. */
@@ -218,29 +297,5 @@ enum MHD_Result answer_callback(void *cls, struct MHD_Connection *connection,
 	}
 	*ptr = NULL;                  /* reset when done */
 
-	// Parse request arguments
-	if (!parse_arguments(connection, &args))
-		return make_server_error_response(connection);
-
-	// Render to buffer
-	mtx_lock(&server->mutex);
-	do
-	{
-		tiles_left = saim_render_mapped_cube(server->saim, args.face, args.lod, args.x, args.y);
-		thrd_yield();
-	}
-	while (tiles_left > 0);
-	mtx_unlock(&server->mutex);
-	if (tiles_left == -1)
-		return make_server_error_response(connection);
-
-	switch (args.format)
-	{
-	case FORMAT_JPEG:
-		return make_jpeg_response(connection, server);
-	case FORMAT_PNG:
-		return make_png_response(connection, server);
-	default:
-		return make_server_error_response(connection);
-	}
+	return process_request(connection, url, server);
 }

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table, th, td {
+  border: 1px solid black;
+}
+th, td {
+  padding: 15px;
+}
+</style>
+</head>
+<body>
+<h1 style="text-align: center;">Earth tile server help</h1>
+<h3>1. Any URL</h3>
+<p>Get mapped cube tile</p>
+<table>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+<th>Values range</th>
+</tr>
+<tr>
+<td>format</td>
+<td>String</td>
+<td>Image format</td>
+<td>jpeg, png</td>
+</tr>
+<tr>
+<td>face</td>
+<td>Integer</td>
+<td>Cube face</td>
+<td>0 to 5</td>
+</tr>
+<tr>
+<td>lod</td>
+<td>Integer</td>
+<td>Level of detail</td>
+<td>0 to maximum lod</td>
+</tr>
+<tr>
+<td>x</td>
+<td>Integer</td>
+<td>X coordinate of tile</td>
+<td>0 to 2^lod-1</td>
+</tr>
+<tr>
+<td>y</td>
+<td>Integer</td>
+<td>Y coordinate of tile</td>
+<td>0 to 2^lod-1</td>
+</tr>
+</table>
+<h3>2. help</h3>
+<p>This page</p>
+</body>
+</html>
