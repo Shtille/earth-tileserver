@@ -19,7 +19,7 @@ else
 endif
 
 TARGET = src
-TARGET_NAME = earth-webserver
+TARGET_NAME = earth-tileserver
 TARGET_FILE = $(BINARY_PATH)/$(TARGET_NAME)$(TARGET_EXT)
 
 SRC_DIRS = .

@@ -15,7 +15,7 @@ It parses GET requests for coordinates and generates images (tiles) for response
 2. Build via make command.
 
 ## Testing
-Use *test.html* for as test browser page for tiles loading.
+Use *test.html* as test browser page for tiles loading.
 
 ## License
 Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).

@@ -147,12 +147,17 @@ static enum MHD_Result make_jpeg_response(struct MHD_Connection *connection, str
 	saim_bitmap bitmap;
 	saim_string data;
 	unsigned char* dest_ptr = NULL;
-	unsigned long dest_size;
+	unsigned long dest_size = 0;
 	enum MHD_Result ret;
 
 	// Make buffer string
 	bitmap.data = server->buffer;
-	if (!saim_decoder_jpeg__save_to_buffer(&bitmap, 100, false,
+	/* 
+	Quality 100 causes first image to have wrong header.
+	So that's a library bug. We should either try to update to the latest libjpeg 
+	or use lesser quality. Now I set it to 95.
+	*/
+	if (!saim_decoder_jpeg__save_to_buffer(&bitmap, 95, false,
 		server->width, server->height, server->bytes_per_pixel, &dest_ptr, &dest_size))
 	{
 		if (dest_ptr != NULL)
