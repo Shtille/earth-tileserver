@@ -161,6 +161,7 @@ static enum MHD_Result make_image_response(struct MHD_Connection *connection, sa
 	mime_type = format_to_mime_type(format);
 	response = MHD_create_response_from_buffer((size_t)data->length, (void*)data->data, MHD_RESPMEM_PERSISTENT);
 	MHD_add_response_header(response, "Content-Type", mime_type);
+	MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
 	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
 	MHD_destroy_response(response);
 
