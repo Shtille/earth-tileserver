@@ -8,11 +8,36 @@ It parses GET requests for coordinates and generates images (tiles) for response
 ## Dependencies
 * [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/)
 * [curl](https://curl.se/)
-* make
+* gcc/clang/mingw
 
 ## Building
 1. Install all dependencies.
 2. Build via make command.
+
+## Deploying
+### Install
+To install sources on Ubuntu 18.04 use following script:
+```bash
+sudo apt update
+sudo apt install git
+sudo apt install gcc
+sudo apt install libcurl4-openssl-dev
+sudo apt install libmicrohttpd-dev
+PATH=/usr/include/x86_64-linux-gnu:$PATH
+mkdir dev
+cd dev
+git clone https://github.com/Shtille/earth-tileserver.git earth-tileserver
+cd earth-tileserver
+git submodule init
+git submodule update
+```
+
+### Run binary
+To run the binary _earth-tileserver.app_ use following script with chosen port number to listen:
+```bash
+cd bin
+./earth-tileserver.app %PORT%
+```
 
 ## Testing
 Use *test.html* as test browser page for tiles loading.
