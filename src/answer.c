@@ -142,7 +142,7 @@ static int make_help_response(struct MHD_Connection *connection)
 	fseek(f, 0, SEEK_SET);
 	char *string = malloc(fsize + 1);
 	ret_count = fread(string, fsize, 1, f);
-	if (ferror(f) != 0)
+	if (ret_count == 0 || ret_count == 1 && ferror(f) != 0)
 	{
 		fclose(f);
 		free(string);
