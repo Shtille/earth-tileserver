@@ -110,22 +110,22 @@ static bool parse_cube_arguments(struct MHD_Connection *connection, arguments_t 
 	return true;
 }
 
-static enum MHD_Result make_server_error_response(struct MHD_Connection *connection)
+static int make_server_error_response(struct MHD_Connection *connection)
 {
 	struct MHD_Response * response;
-	enum MHD_Result ret;
+	int ret;
 
 	response = MHD_create_response_from_buffer(strlen(kServerError), (void*)kServerError, MHD_RESPMEM_PERSISTENT);
-	ret = MHD_queue_response(connection, MHD_HTTP_INTERNAL_SERVER_ERROR, response);
+	ret = (int)MHD_queue_response(connection, MHD_HTTP_INTERNAL_SERVER_ERROR, response);
 	MHD_destroy_response(response);
 
 	return ret;
 }
 
-static enum MHD_Result make_help_response(struct MHD_Connection *connection)
+static int make_help_response(struct MHD_Connection *connection)
 {
 	struct MHD_Response * response;
-	enum MHD_Result ret;
+	int ret;
 	FILE * f;
 	f = fopen("help.html", "rt");
 	if (f == NULL)
@@ -144,7 +144,7 @@ static enum MHD_Result make_help_response(struct MHD_Connection *connection)
 
 	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_PERSISTENT);
 	MHD_add_response_header(response, "Content-Type", "text/html");
-	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+	ret = (int)MHD_queue_response(connection, MHD_HTTP_OK, response);
 	MHD_destroy_response(response);
 
 	free(string);
@@ -152,28 +152,28 @@ static enum MHD_Result make_help_response(struct MHD_Connection *connection)
 	return ret;
 }
 
-static enum MHD_Result make_image_response(struct MHD_Connection *connection, saim_string * data, enum image_format_t format)
+static int make_image_response(struct MHD_Connection *connection, saim_string * data, enum image_format_t format)
 {
 	struct MHD_Response * response;
-	enum MHD_Result ret;
+	int ret;
 	const char* mime_type;
 
 	mime_type = format_to_mime_type(format);
 	response = MHD_create_response_from_buffer((size_t)data->length, (void*)data->data, MHD_RESPMEM_PERSISTENT);
 	MHD_add_response_header(response, "Content-Type", mime_type);
-	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+	ret = (int)MHD_queue_response(connection, MHD_HTTP_OK, response);
 	MHD_destroy_response(response);
 
 	return ret;
 }
 
-static enum MHD_Result make_jpeg_response(struct MHD_Connection *connection, struct server_t * server)
+static int make_jpeg_response(struct MHD_Connection *connection, struct server_t * server)
 {
 	saim_bitmap bitmap;
 	saim_string data;
 	unsigned char* dest_ptr = NULL;
 	unsigned long dest_size = 0;
-	enum MHD_Result ret;
+	int ret;
 
 	// Make buffer string
 	bitmap.data = server->buffer;
@@ -198,11 +198,11 @@ static enum MHD_Result make_jpeg_response(struct MHD_Connection *connection, str
 	return ret;
 }
 
-static enum MHD_Result make_png_response(struct MHD_Connection *connection, struct server_t * server)
+static int make_png_response(struct MHD_Connection *connection, struct server_t * server)
 {
 	saim_bitmap bitmap;
 	saim_string data;
-	enum MHD_Result ret;
+	int ret;
 
 	// Make buffer string
 	bitmap.data = server->buffer;
@@ -247,7 +247,7 @@ static bool process_cube_request(struct MHD_Connection *connection, struct serve
 	return render_mapped_cube(connection, &args, server);
 }
 
-static enum MHD_Result process_request(struct MHD_Connection *connection, const char* url, struct server_t * server)
+static int process_request(struct MHD_Connection *connection, const char* url, struct server_t * server)
 {
 	enum image_format_t format;
 
@@ -274,7 +274,8 @@ static enum MHD_Result process_request(struct MHD_Connection *connection, const 
 	}
 }
 
-enum MHD_Result answer_callback(void *cls, struct MHD_Connection *connection,
+__MHD_INT_RESULT
+answer_callback(void *cls, struct MHD_Connection *connection,
 	const char *url, const char *method, const char *version,
 	const char *upload_data, size_t *upload_data_size, void **ptr)
 {
@@ -297,5 +298,5 @@ enum MHD_Result answer_callback(void *cls, struct MHD_Connection *connection,
 	}
 	*ptr = NULL;                  /* reset when done */
 
-	return process_request(connection, url, server);
+	return (__MHD_INT_RESULT) process_request(connection, url, server);
 }
