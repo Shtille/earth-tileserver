@@ -127,7 +127,9 @@ static int make_help_response(struct MHD_Connection *connection)
 {
 	struct MHD_Response * response;
 	int ret;
+	size_t ret_count;
 	FILE * f;
+
 	f = fopen("help.html", "rt");
 	if (f == NULL)
 	{
@@ -139,7 +141,13 @@ static int make_help_response(struct MHD_Connection *connection)
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	char *string = malloc(fsize + 1);
-	(void)fread(string, fsize, 1, f);
+	ret_count = fread(string, fsize, 1, f);
+	if (ferror(f) != 0)
+	{
+		fclose(f);
+		free(string);
+		return (int) MHD_NO;
+	}
 	fclose(f);
 	string[fsize] = '\0';
 

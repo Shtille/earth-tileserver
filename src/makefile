@@ -1,7 +1,7 @@
 # Makefile for src
 
 # Platform-specific defines
-LIB_PTHREAD =
+LINUX_LIBS =
 ifeq ($(OS),Windows_NT)
 	# Windows
 	LDFLAGS = -s -mwindows
@@ -12,7 +12,7 @@ else
 	ifeq ($(UNAME_S),Linux)
 		# Linux
 		TARGET_EXT = .app
-		LIB_PTHREAD = -lpthread
+		LINUX_LIBS = -lpthread -lm -ldl
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		# Mac OS X
@@ -35,7 +35,7 @@ CFLAGS += -Wall -O3
 CFLAGS += $(INCLUDE)
 CFLAGS += $(DEFINES)
 
-LDLIBS = -lmicrohttpd -lsaim -lcurl -ljpeg -lpng -lz $(LIB_PTHREAD)
+LDLIBS = -lmicrohttpd -lsaim -lcurl -ljpeg -lpng -lz $(LINUX_LIBS)
 
 ifeq ($(OS),Windows_NT)
 	CLEAN = rmdir /Q /S $(BINARY_PATH)
