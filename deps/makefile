@@ -3,7 +3,7 @@
 TARGET = deps
 
 # Main routine
-SUBDIRS_CUSTOM = saim
+SUBDIRS_CUSTOM = libsaim
 
 all: $(TARGET)
 
@@ -18,6 +18,6 @@ help:
 $(TARGET): $(SUBDIRS_CUSTOM)
 
 # Declare rules for custom subdirs
-.PHONY: saim
-saim:
-	@$(MAKE) -C libsaim
+.PHONY: libsaim
+libsaim:
+	@$(MAKE) -C $@

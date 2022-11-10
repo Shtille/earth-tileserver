@@ -26,6 +26,7 @@ static const char* format_to_mime_type(enum image_format_t format)
 		case FORMAT_JPEG:
 			return "image/jpeg";
 		case FORMAT_PNG:
+		default:
 			return "image/png";
 	}
 }
@@ -138,7 +139,7 @@ static int make_help_response(struct MHD_Connection *connection)
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	char *string = malloc(fsize + 1);
-	fread(string, fsize, 1, f);
+	(void)fread(string, fsize, 1, f);
 	fclose(f);
 	string[fsize] = '\0';
 
