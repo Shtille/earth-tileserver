@@ -14,6 +14,16 @@ It parses GET requests for coordinates and generates images (tiles) for response
 1. Install all dependencies.
 2. Build via make command.
 
+## Running
+There are two possible run options.
+
+### When file directory is not set
+When file root directory is not set, any request is treated as tile request.
+
+### When file directory is set
+When file root directory is set, only requests _/tile_ are treated as tile requests.
+Rest requests are treated as file requests, and tile application acts like web server.
+
 ## Deploying
 ### Install
 To install sources on Ubuntu 18.04 use following script:
@@ -30,13 +40,19 @@ git clone https://github.com/Shtille/earth-tileserver.git earth-tileserver
 cd earth-tileserver
 git submodule init
 git submodule update
+make
 ```
 
 ### Run binary
 To run the binary _earth-tileserver.app_ use following script with chosen port number to listen:
 ```bash
 cd bin
-./earth-tileserver.app %PORT%
+./earth-tileserver.app --port %PORT%
+```
+To run in link with Earth WebGL just specify the site file root directory:
+```bash
+cd bin
+./earth-tileserver.app --port %PORT% --root %PATH_TO_EARTH_WEBGL%
 ```
 
 ## Testing

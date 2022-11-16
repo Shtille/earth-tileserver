@@ -28,6 +28,7 @@ struct server_t * server__init(int width, int height, int bytes_per_pixel)
 	server->width = width;
 	server->height = height;
 	server->bytes_per_pixel = bytes_per_pixel;
+	server->file_root = NULL;
 
 	// Init saim
 	server->saim = saim_init(
@@ -67,12 +68,23 @@ struct server_t * server__init(int width, int height, int bytes_per_pixel)
 
 	return server;
 }
-int server__start(struct server_t * server, int port)
+int server__start(struct server_t * server, int port, const char * file_root)
 {
 	if (server->daemon != NULL)
 	{
 		printf("Daemon has already been started\n");
 		return 1;
+	}
+	// Copy file root
+	if (file_root != NULL)
+	{
+		size_t len = strlen(file_root);
+		server->file_root = (char*) malloc((len+1)*sizeof(char));
+		if (server->file_root == NULL)
+			return 2;
+		strcpy(server->file_root, file_root);
+		server->file_root[len] = '\0';
+		printf("File root directory is set to: %s\n", server->file_root);
 	}
 	// Start daemon
 	server->daemon = MHD_start_daemon(
@@ -115,6 +127,11 @@ void server__free(struct server_t * server)
 	{
 		saim_cleanup(server->saim);
 		server->saim = NULL;
+	}
+	if (server->file_root != NULL)
+	{
+		free((void*)server->file_root);
+		server->file_root = NULL;
 	}
 	free((void*)server);
 	server = NULL;

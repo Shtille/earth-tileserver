@@ -130,7 +130,7 @@ static int make_help_response(struct MHD_Connection *connection)
 	size_t ret_count;
 	FILE * f;
 
-	f = fopen("help.html", "rt");
+	f = fopen("help.html", "rb");
 	if (f == NULL)
 	{
 		printf("help file hasn't been found\n");
@@ -141,12 +141,77 @@ static int make_help_response(struct MHD_Connection *connection)
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	char *string = malloc(fsize + 1);
+	if (string == NULL)
+	{
+		printf("malloc failed\n");
+		return make_server_error_response(connection);
+	}
 	ret_count = fread(string, fsize, 1, f);
 	if (ret_count == 0 || (ret_count == 1 && ferror(f) != 0))
 	{
 		fclose(f);
 		free(string);
-		return (int) MHD_NO;
+		return make_server_error_response(connection);
+	}
+	fclose(f);
+	string[fsize] = '\0';
+
+	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_PERSISTENT);
+	MHD_add_response_header(response, "Content-Type", "text/html");
+	ret = (int)MHD_queue_response(connection, MHD_HTTP_OK, response);
+	MHD_destroy_response(response);
+
+	free(string);
+
+	return ret;
+}
+
+static int make_file_response(struct MHD_Connection *connection, const char* url, struct server_t * server)
+{
+	struct MHD_Response * response;
+	int ret;
+	size_t ret_count;
+	size_t file_len, file_root_len;
+	FILE * f;
+	char * path;
+
+	/* server->file_root is not NULL */
+	file_root_len = strlen(server->file_root);
+	file_len = file_root_len + strlen(url);
+	path = (char*) malloc((file_len+1)*sizeof(char));
+	if (path == NULL)
+		return make_server_error_response(connection);
+	strcpy(path, server->file_root);
+	strcpy(path + file_root_len, url);
+	path[file_len] = '\0';
+
+	f = fopen(path, "rb");
+	if (f == NULL)
+	{
+		printf("file \'%s\' hasn't been found\n", path);
+		free(path);
+		return make_server_error_response(connection);
+	}
+	/*
+	printf("passing file \'%s\'\n", path);
+	*/
+	free(path);
+
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *string = malloc(fsize + 1);
+	if (string == NULL)
+	{
+		printf("malloc failed\n");
+		return make_server_error_response(connection);
+	}
+	ret_count = fread(string, fsize, 1, f);
+	if (ret_count == 0 || (ret_count == 1 && ferror(f) != 0))
+	{
+		fclose(f);
+		free(string);
+		return make_server_error_response(connection);
 	}
 	fclose(f);
 	string[fsize] = '\0';
@@ -257,16 +322,13 @@ static bool process_cube_request(struct MHD_Connection *connection, struct serve
 	return render_mapped_cube(connection, &args, server);
 }
 
-static int process_request(struct MHD_Connection *connection, const char* url, struct server_t * server)
+static int process_tile_request(struct MHD_Connection *connection, struct server_t * server)
 {
 	enum image_format_t format;
 
-	if (strcmp(url, "/help") == 0)
-		return make_help_response(connection);
-
 	// Get image format
 	if (!get_image_format(connection, &format))
-		return false;
+		return (int) MHD_NO;
 
 	// Process request
 	if (!process_cube_request(connection, server))
@@ -281,6 +343,23 @@ static int process_request(struct MHD_Connection *connection, const char* url, s
 		return make_png_response(connection, server);
 	default:
 		return make_server_error_response(connection);
+	}
+}
+
+static int process_request(struct MHD_Connection *connection, const char* url, struct server_t * server)
+{
+	if (strcmp(url, "/help") == 0)
+		return make_help_response(connection);
+	else if (server->file_root != NULL)
+	{
+		if (strcmp(url, "/tile") == 0)
+			return process_tile_request(connection, server);
+		else
+			return make_file_response(connection, url, server);
+	}
+	else // file root is null
+	{
+		return process_tile_request(connection, server);
 	}
 }
 
