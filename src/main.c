@@ -32,6 +32,13 @@ void on_terminate(int func)
 	mtx_unlock(&mutex);
 }
 
+struct arguments_t {
+	const char * file_root;
+	const char * index_file;
+	int port;
+	int help;
+};
+
 void print_usage(const char * name)
 {
 	printf("Usage: %s <option(s)>\n"
@@ -39,34 +46,33 @@ void print_usage(const char * name)
 		   "\t-h,--help\tShow this help message\n"
 		   "\t-p,--port\tPort to listen (default is 80)\n"
 		   "\t-r,--root\tRoot directory for files (by default it's disabled)\n"
+		   "\t-i,--index\tIndex file (default is index.html)\n"
 		, name);
 }
 
 /**
  * Parses arguments
  * 
- * @param[in] argc   Arguments count.
- * @param[in] argv   Arguments array.
- * @param[out] help  Whether help is requested.
- * @param[out] port  Port number to listen.
- * @param[out] root  File root directory.
+ * @param[in] argc        Arguments count.
+ * @param[in] argv        Arguments array.
+ * @param[out] arguments  Arguments output structure.
  * @return Return value.
  */
-int parse_arguments(int argc, char *const *argv, int * help, int * port, char const ** root)
+int parse_arguments(int argc, char *const *argv, struct arguments_t * arguments)
 {
-	*help = 0;
+	arguments->help = 0;
 	for (int i = 1; i < argc; ++i)
 	{
 		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
 		{
 			print_usage(argv[0]);
-			*help = 1;
+			arguments->help = 1;
 			return 0;
 		}
 		else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0)
 		{
 			if (i+1 < argc)
-				*port = atoi(argv[++i]);
+				arguments->port = atoi(argv[++i]);
 			else
 			{
 				printf("%s option requires an argument\n", argv[i]);
@@ -76,7 +82,17 @@ int parse_arguments(int argc, char *const *argv, int * help, int * port, char co
 		else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--root") == 0)
 		{
 			if (i+1 < argc)
-				*root = argv[++i];
+				arguments->file_root = argv[++i];
+			else
+			{
+				printf("%s option requires an argument\n", argv[i]);
+				return 1;
+			}
+		}
+		else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--index") == 0)
+		{
+			if (i+1 < argc)
+				arguments->index_file = argv[++i];
 			else
 			{
 				printf("%s option requires an argument\n", argv[i]);
@@ -94,14 +110,17 @@ int parse_arguments(int argc, char *const *argv, int * help, int * port, char co
 
 int main(int argc, char *const *argv)
 {
-	const char * file_root = NULL;
-	int port = 80; // default port
+	struct arguments_t arguments;
 	int ret;
 
+	arguments.file_root = NULL;
+	arguments.index_file = NULL;
+	arguments.port = 80; // default port
+
 	// Parse arguments
-	if (parse_arguments(argc, argv, &ret, &port, &file_root) != 0)
+	if (parse_arguments(argc, argv, &arguments) != 0)
 		return 1;
-	if (ret == 1) // help was requested
+	if (arguments.help == 1) // help was requested
 		return 0;
 
 	// Init mutex and condition variable
@@ -128,7 +147,7 @@ int main(int argc, char *const *argv)
 	}
 
 	// Start the server
-	ret = server__start(server, port, file_root);
+	ret = server__start(server, arguments.port, arguments.file_root, arguments.index_file);
 	if (ret != 0)
 	{
 		server__free(server);

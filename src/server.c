@@ -68,7 +68,7 @@ struct server_t * server__init(int width, int height, int bytes_per_pixel)
 
 	return server;
 }
-int server__start(struct server_t * server, int port, const char * file_root)
+int server__start(struct server_t * server, int port, const char * file_root, const char * index_file)
 {
 	if (server->daemon != NULL)
 	{
@@ -85,6 +85,26 @@ int server__start(struct server_t * server, int port, const char * file_root)
 		strcpy(server->file_root, file_root);
 		server->file_root[len] = '\0';
 		printf("File root directory is set to: %s\n", server->file_root);
+	}
+	// Copy index file
+	if (index_file != NULL)
+	{
+		size_t len = strlen(index_file);
+		server->index_file = (char*) malloc((len+2)*sizeof(char));
+		if (server->index_file == NULL)
+			return 2;
+		if (index_file[0] == '/')
+		{
+			strcpy(server->index_file, index_file);
+			server->index_file[len] = '\0';
+		}
+		else // append slash
+		{
+			server->index_file[0] = '/';
+			strcpy(server->index_file+1, index_file);
+			server->index_file[len+1] = '\0';
+		}
+		printf("Index file is set to: %s\n", server->index_file);
 	}
 	// Start daemon
 	server->daemon = MHD_start_daemon(
@@ -132,6 +152,11 @@ void server__free(struct server_t * server)
 	{
 		free((void*)server->file_root);
 		server->file_root = NULL;
+	}
+	if (server->index_file != NULL)
+	{
+		free((void*)server->index_file);
+		server->index_file = NULL;
 	}
 	free((void*)server);
 	server = NULL;

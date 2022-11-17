@@ -20,11 +20,12 @@ struct server_t
 	int height;
 	int bytes_per_pixel;
 	char * file_root;
+	char * index_file;
 	mtx_t mutex;
 };
 
 struct server_t * server__init(int width, int height, int bytes_per_pixel);
-int server__start(struct server_t * server, int port, const char * file_root);
+int server__start(struct server_t * server, int port, const char * file_root, const char * index_file);
 void server__stop(struct server_t * server);
 void server__free(struct server_t * server);
 

@@ -6,6 +6,7 @@
 #include "answer.h"
 #include "server.h"
 #include "image_format.h"
+#include "mime_type.h"
 
 #include "saim_decoder_jpeg.h"
 #include "saim_decoder_png.h"
@@ -18,6 +19,7 @@ typedef struct {
 } arguments_t;
 
 static const char* kServerError = "<html><body>An internal server error has occurred!</body></html>";
+static const char* kEmptyPage = "<html><head><title>File not found</title></head><body>File not found</body></html>";
 
 static const char* format_to_mime_type(enum image_format_t format)
 {
@@ -117,32 +119,58 @@ static int make_server_error_response(struct MHD_Connection *connection)
 	int ret;
 
 	response = MHD_create_response_from_buffer(strlen(kServerError), (void*)kServerError, MHD_RESPMEM_PERSISTENT);
+	MHD_add_response_header(response, "Content-Type", "text/html");
 	ret = (int)MHD_queue_response(connection, MHD_HTTP_INTERNAL_SERVER_ERROR, response);
 	MHD_destroy_response(response);
 
 	return ret;
 }
 
-static int make_help_response(struct MHD_Connection *connection)
+/* Empty page or page not found response */
+static int make_empty_page_response(struct MHD_Connection *connection)
 {
 	struct MHD_Response * response;
 	int ret;
-	size_t ret_count;
-	FILE * f;
 
-	f = fopen("help.html", "rb");
+	response = MHD_create_response_from_buffer(strlen(kEmptyPage), (void*)kEmptyPage, MHD_RESPMEM_PERSISTENT);
+	ret = (int)MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
+	MHD_destroy_response(response);
+
+	return ret;
+}
+
+/**
+ * Returns file presented in the current directory (help.html for example)
+ */
+static int make_local_file_response(struct MHD_Connection *connection, const char* path)
+{
+	char mime_type[64];
+	struct MHD_Response * response;
+	FILE * f;
+	size_t ret_count;
+	int ret;
+
+	// Open file
+	f = fopen(path, "rb");
 	if (f == NULL)
 	{
-		printf("help file hasn't been found\n");
-		return make_server_error_response(connection);
+		printf("file \'%s\' hasn't been found\n", path);
+		return make_empty_page_response(connection);
 	}
 
+	// Read file
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
+	if (fsize <= 0)
+	{
+		fclose(f);
+		return make_server_error_response(connection);
+	}
 	fseek(f, 0, SEEK_SET);
 	char *string = malloc(fsize + 1);
 	if (string == NULL)
 	{
+		fclose(f);
 		printf("malloc failed\n");
 		return make_server_error_response(connection);
 	}
@@ -156,26 +184,23 @@ static int make_help_response(struct MHD_Connection *connection)
 	fclose(f);
 	string[fsize] = '\0';
 
-	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_PERSISTENT);
-	MHD_add_response_header(response, "Content-Type", "text/html");
+	translate_url_to_mime_type(path, mime_type, sizeof(mime_type)/sizeof(mime_type[0]));
+
+	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_MUST_FREE);
+	MHD_add_response_header(response, "Content-Type", mime_type);
 	ret = (int)MHD_queue_response(connection, MHD_HTTP_OK, response);
 	MHD_destroy_response(response);
-
-	free(string);
 
 	return ret;
 }
 
-static int make_file_response(struct MHD_Connection *connection, const char* url, struct server_t * server)
+static int make_server_file_response(struct MHD_Connection *connection, const char* url, struct server_t * server)
 {
-	struct MHD_Response * response;
-	int ret;
-	size_t ret_count;
-	size_t file_len, file_root_len;
-	FILE * f;
 	char * path;
+	size_t file_len, file_root_len;
+	int ret;
 
-	/* server->file_root is not NULL */
+	// Make path
 	file_root_len = strlen(server->file_root);
 	file_len = file_root_len + strlen(url);
 	path = (char*) malloc((file_len+1)*sizeof(char));
@@ -185,45 +210,23 @@ static int make_file_response(struct MHD_Connection *connection, const char* url
 	strcpy(path + file_root_len, url);
 	path[file_len] = '\0';
 
-	f = fopen(path, "rb");
-	if (f == NULL)
-	{
-		printf("file \'%s\' hasn't been found\n", path);
-		free(path);
-		return make_server_error_response(connection);
-	}
-	/*
-	printf("passing file \'%s\'\n", path);
-	*/
+	ret = make_local_file_response(connection, path);
+
 	free(path);
-
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	char *string = malloc(fsize + 1);
-	if (string == NULL)
-	{
-		printf("malloc failed\n");
-		return make_server_error_response(connection);
-	}
-	ret_count = fread(string, fsize, 1, f);
-	if (ret_count == 0 || (ret_count == 1 && ferror(f) != 0))
-	{
-		fclose(f);
-		free(string);
-		return make_server_error_response(connection);
-	}
-	fclose(f);
-	string[fsize] = '\0';
-
-	response = MHD_create_response_from_buffer((size_t)fsize, (void*)string, MHD_RESPMEM_PERSISTENT);
-	MHD_add_response_header(response, "Content-Type", "text/html");
-	ret = (int)MHD_queue_response(connection, MHD_HTTP_OK, response);
-	MHD_destroy_response(response);
-
-	free(string);
-
 	return ret;
+}
+
+static int make_help_response(struct MHD_Connection *connection)
+{
+	return make_local_file_response(connection, "help.html");
+}
+
+static int make_index_file_response(struct MHD_Connection *connection, struct server_t * server)
+{
+	if (server->index_file == NULL)
+		return make_server_file_response(connection, "/index.html", server);
+	else
+		return make_server_file_response(connection, server->index_file, server);
 }
 
 static int make_image_response(struct MHD_Connection *connection, saim_string * data, enum image_format_t format)
@@ -354,8 +357,10 @@ static int process_request(struct MHD_Connection *connection, const char* url, s
 	{
 		if (strcmp(url, "/tile") == 0)
 			return process_tile_request(connection, server);
+		else if (strcmp(url, "") == 0 || strcmp(url, "/") == 0)
+			return make_index_file_response(connection, server);
 		else
-			return make_file_response(connection, url, server);
+			return make_server_file_response(connection, url, server);
 	}
 	else // file root is null
 	{
